@@ -14,8 +14,10 @@
 
 typedef struct {
     int seq_num;
-    char data[MAX_DATA_SIZE];
     uint16_t checksum;
+    uint16_t length;
+    __u_short flag;
+    char data[MAX_DATA_SIZE];
 } Packet;
 
 
@@ -33,29 +35,47 @@ int rudp_socket(struct sockaddr_in addr, int port, char* ip) {
         exit(1);
     }
 
-
-    // // Configure server address
-    // memset(&addr, 0, sizeof(addr));
-    // addr.sin_family = AF_INET;
-    // addr.sin_port = htons (port);
-    // addr.sin_addr.s_addr = (ip);
-
-    // // Bind socket to server address
-    // if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-    //     perror("Socket bind failed");
-    //     exit(1);
-    // }
-
     return sockfd;
     
 }
 
 
-int rudp_recv(){
-    int sockfd;
-    struct sockaddr_in temp_addr;
+void rudp_send(const char *data, int sockfd, __u_short flag, struct sockaddr_in temp_addr) {;
     socklen_t addr_len = sizeof(struct sockaddr);
-    char buffer[MAX_DATA_SIZE + sizeof(int)]; //TODO: change the sizeof section to represent the header (should use a MACRO)
+    Packet packet;
+    packet.seq_num = seq_num;
+    packet.flag = flag;
+    strncpy(packet.data, data, MAX_DATA_SIZE);
+    packet.length = sizeof(packet);
+    Packet tempPacket; 
+
+    // Send packet
+    sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&temp_addr, addr_len);
+    
+    // Wait for acknowledgment
+    while (TRUE) {
+        // Set timeout for acknowledgment
+        struct timeval tv;
+        tv.tv_sec = 6; // 1 second timeout
+        tv.tv_usec = 0;
+        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
+        int bytes_received = recvfrom(sockfd, &tempPacket, sizeof(int), 0, (struct sockaddr *)&temp_addr, &addr_len);
+        if (bytes_received != -1 && tempPacket.seq_num == seq_num) {
+            printf("Packet with sequence number %d acknowledged.\n", seq_num);
+            break;
+        } else {
+            printf("Timeout. Retransmitting packet...\n");
+            sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&temp_addr, addr_len);
+            
+        }
+    }
+}
+
+
+int rudp_recv(int sockfd, struct sockaddr_in temp_addr){
+    socklen_t addr_len = sizeof(struct sockaddr);
+    char buffer[sizeof(Packet)];
 
     while (TRUE) {
         // Receive packet from client
@@ -67,55 +87,31 @@ int rudp_recv(){
 
         Packet *packet = (Packet *)buffer;
         
-
+        if(packet-> flag == 1){
+            printf("received SYN");
+            rudp_send("ACK", sockfd, 2, temp_addr);
+        }
+        if(packet-> flag == 2){
+            printf("received ACK");
+        }
+        if(packet-> flag == 0){
         // Check sequence number
-        if (packet->seq_num == seq_num) {
-            printf("Received packet with sequence number %d\n", seq_num);
+            if (packet->seq_num == seq_num) {
+                printf("Received packet with sequence number %d\n", seq_num);
+                char seq_num_c = seq_num + '0';
+                // Acknowledge received packet
+                rudp_send(&seq_num_c, sockfd, 2, temp_addr);
+                // Print received data
+                printf("Data: %s\n", packet->data);
 
-            // Acknowledge received packet
-            sendto(sockfd, &seq_num, sizeof(int), 0, (struct sockaddr *)&temp_addr, addr_len);
-
-            // Print received data
-            printf("Data: %s\n", packet->data);
-
-            // Update sequence number
-            seq_num = (seq_num + 1) % 2;
-        } else {
-            printf("Received out-of-order packet. Discarding...\n");
+                // Update sequence number
+                seq_num = (seq_num + 1);
+            } else {
+                printf("Received out-of-order packet. Discarding...\n");
+                return 1;
+            }
         }
 
-    }
-}
-
-
-void rudp_send(const char *data, int sockfd) {
-    struct sockaddr_in temp_addr;
-    socklen_t addr_len = sizeof(struct sockaddr);
-    Packet packet;
-    packet.seq_num = seq_num;
-    strncpy(packet.data, data, MAX_DATA_SIZE);
-
-    // Send packet
-    sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&temp_addr, addr_len);
-    
-    // Wait for acknowledgment
-    while (TRUE) {
-        // Set timeout for acknowledgment
-        struct timeval tv;
-        tv.tv_sec = 1; // 1 second timeout
-        tv.tv_usec = 0;
-        setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-
-        int ack_seq_num;
-        int bytes_received = recvfrom(sockfd, &ack_seq_num, sizeof(int), 0, (struct sockaddr *)&temp_addr, &addr_len);
-        if (bytes_received != -1 && ack_seq_num == seq_num) {
-            printf("Packet with sequence number %d acknowledged.\n", seq_num);
-            break;
-        } else {
-            printf("Timeout. Retransmitting packet...\n");
-            sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)&temp_addr, addr_len);
-            
-        }
     }
 }
 
