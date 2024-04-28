@@ -99,7 +99,7 @@ int rudp_recv(int sockfd, struct sockaddr_in recv_addr){
             if (packet->seq_num == seq_num) {
                 printf("Received packet with sequence number %d\n", seq_num);
                 char seq_num_c = seq_num + '0';
-                rudp_send(seq_num_c, sockfd, 2, recv_addr);// Acknowledge received packet
+                rudp_send(&seq_num_c, sockfd, 2, recv_addr);// Acknowledge received packet
                 printf("Data: %s\n", packet->data);// Print received data
                 seq_num = (seq_num + 1);// Update sequence number
             } else {
@@ -120,58 +120,33 @@ void rudp_close(int socket){
 
 
 
-int performHandshake(int sockfd_send, struct sockaddr_in *serverAddr,int sockfd_recv, struct sockaddr_in *clientAddr) {
+int senderHandshake(int sockfd, struct sockaddr_in *serverAddr) {
     struct timeval timeout;
     timeout.tv_sec = 6;
     timeout.tv_usec = 0;
-    setsockopt(sockfd_send, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
-    setsockopt(sockfd_recv, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 
-    Packet handshakePacket_send; //sender's packet
-    handshakePacket_send.flag = 1; //SYN flag
-
-    Packet handshakePacket_recv; //receiver's packet
-    socklen_t clientAddrLen = sizeof(*clientAddr);
+    Packet handshake_send; //sender's packet
+    handshake_send.flag = 1; //SYN flag
+    socklen_t serverAddrLen = sizeof(*serverAddr);
     
     /*****************************************/
     //sender Sending SYN packet to the receiver
-    if (sendto(sockfd_send, &handshakePacket_send, ntohs(handshakePacket_send.length), 0, (const struct sockaddr *)serverAddr, sizeof(*serverAddr)) < 0) {
+    if(sendto(sockfd, &handshake_send, ntohs(handshake_send.length), 0, (const struct sockaddr *)serverAddr, serverAddrLen) < 0) {
         perror("sendto failed\n");
         return -1; // Error sending handshake packet
     }
     printf("SYN packet sent.\n");
 
 
-    /*******************************************/
-    //receiver receiving SYN and sending back ACK
-    if ((recvfrom(sockfd_recv, &handshakePacket_recv, sizeof(handshakePacket_recv), 0, (struct sockaddr *)clientAddr, &clientAddrLen)) < 0) {
-        perror("recvfrom failed\n");
-        return -1; // Error receiving handshake packet
-    }
-
-    if(handshakePacket_recv.flag == 1){
-        printf("SYN received. sending ACK\n");
-        handshakePacket_recv.flag = 2; //ACK flag
-
-        if(sendto(sockfd_recv, &handshakePacket_recv, ntohs(handshakePacket_recv.length), 0, (const struct sockaddr *)clientAddr, sizeof(*clientAddr)) < 0){
-            perror("sendto failed\n");
-            return -1;
-        }
-    }
-    else{
-        printf("Hasn't received SYN. aborting\n");
-        return 1;
-    }
-
-
     /**************************************************/
     // sender waits for acknowledgment from the receiver
-    if (recvfrom(sockfd_send, &handshakePacket_send, sizeof(handshakePacket_send), 0, (struct sockaddr *)serverAddr, sizeof(*serverAddr))) {
+    if (recvfrom(sockfd, &handshake_send, sizeof(handshake_send), 0, (struct sockaddr *)serverAddr, &serverAddrLen)) {
         printf("Acknowledgment for handshake not received. Handshake failed.\n");
         return 1; // Handshake failed
     }
 
-    if(handshakePacket_send.flag == 2){
+    if(handshake_send.flag == 2){
         printf("ACK received\n");
     }
     else{
@@ -181,4 +156,33 @@ int performHandshake(int sockfd_send, struct sockaddr_in *serverAddr,int sockfd_
 
     printf("Handshake successful.\n");
     return 0; // Handshake successful
+}
+
+
+int receiverHandshake(int sockfd, struct sockaddr_in *clientAddr){
+    Packet handshake_recv; //receiver's packet
+    socklen_t clientAddrLen = sizeof(*clientAddr);
+
+    /*******************************************/
+    //receiver receiving SYN and sending back ACK
+    if ((recvfrom(sockfd, &handshake_recv, sizeof(handshake_recv), 0, (struct sockaddr *)clientAddr, &clientAddrLen)) < 0) {
+        perror("recvfrom failed\n");
+        return -1; // Error receiving handshake packet
+    }
+
+    if(handshake_recv.flag == 1){
+        printf("SYN received. sending ACK\n");
+        handshake_recv.flag = 2; //ACK flag
+
+        if(sendto(sockfd, &handshake_recv, ntohs(handshake_recv.length), 0, (const struct sockaddr *)clientAddr, sizeof(*clientAddr)) < 0){
+            perror("sendto failed\n");
+            return -1;
+        }
+    }
+    else{
+        printf("Hasn't received SYN. aborting\n");
+        return 1;
+    }
+
+    return 0; //success
 }

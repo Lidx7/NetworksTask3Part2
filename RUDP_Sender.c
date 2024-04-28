@@ -40,42 +40,13 @@ int main(int argc, char* argv[]) {
     socklen_t addr_len = sizeof(serverAddress);
     int send_socket = rudp_socket(serverAddress, port, ip);
 
-    // Send SYN
-    printf("Sending handshake request to server...\n");
-    rudp_send("SYN", send_socket, 1, serverAddress);
-    //sendto(send_socket, "SYN", sizeof("SYN"), 0, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
-    printf("Handshake request sent. Waiting for acknowledgment...\n");
-
-    // Receive ACK
-    recvfrom(send_socket, buffer, sizeof("ACK"), 0, (struct sockaddr *)&serverAddress, &addr_len);
-    printf("Handshake acknowledgment received from server: %s\n", buffer);
-
-    printf("Handshake complete. Sending data...\n");
-
-
-// // Wait for acknowledgment
-//     while (TRUE) {
-//         // Set timeout for acknowledgment
-//         struct timeval tv;
-//         tv.tv_sec = 6; // 1 second timeout
-//         tv.tv_usec = 0;
-//         int ex_seq_num = 0;
-//         setsockopt(send_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-
-//         int bytes_received = recvfrom(send_socket, &buffer, sizeof(int), 0, (struct sockaddr *)&serverAddress, &addr_len);
-//         Packet *packet = (Packet *)buffer;
-
-//         if (bytes_received != -1 && ((packet)->seq_num == ex_seq_num)) {
-//             printf("Packet with sequence number %d acknowledged.\n", ex_seq_num);
-//             ex_seq_num++;
-//             break;
-//         } else {
-//             printf("Timeout. Retransmitting packet...\n");
-//             sendto(send_socket, &packet, sizeof(packet), 0, (struct sockaddr *)&serverAddress, addr_len);
-            
-//         }
-//     }
-
+    if(senderHandshake(send_socket, &serverAddress) != 0){
+        printf("handshake error. aborting\n");
+        exit(1);
+    }
+    else{
+        printf("handshake successful\n");
+    }
 
     //sending the file and repeating as long as the user wants
     char again;

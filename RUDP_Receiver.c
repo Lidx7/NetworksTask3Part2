@@ -22,17 +22,17 @@ int main(int argc, char* argv[]) {
     int curr_port = atoi(argv[1]);
 
     //creating socket
-    struct sockaddr_in server_addr, client_addr;
+    struct sockaddr_in clientAddr;
     socklen_t addr_len = sizeof(struct sockaddr);
     Packet current_packet;
-    int recv_socket = rudp_socket(server_addr, curr_port, INADDR_ANY);
+    int recv_socket = rudp_socket(clientAddr, curr_port, INADDR_ANY);
     char buffer[BUFFER_SIZE];
 
-    memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(curr_port);
-    if ((bind(recv_socket, (struct sockaddr*)&server_addr, sizeof(server_addr))) < 0 ) {
+    memset(&clientAddr, 0, sizeof(clientAddr));
+    clientAddr.sin_family = AF_INET;
+    clientAddr.sin_addr.s_addr = INADDR_ANY;
+    clientAddr.sin_port = htons(curr_port);
+    if ((bind(recv_socket, (struct sockaddr*)&clientAddr, sizeof(clientAddr))) < 0 ) {
         perror("Error binding socket");
         exit(1);
     }
@@ -46,19 +46,19 @@ int main(int argc, char* argv[]) {
     double total_time;
     start_time = clock();   
 
-    printf("waiting for a SYN from sender...\n");
-    int getting_handshke;
-    while(1){
-        while(1){
-            if((getting_handshke = rudp_recv(recv_socket, server_addr)) == 0){
-                printf("received ACK");
-                break;
-            }
-        }
+    if(senderHandshake(recv_socket, &clientAddr) != 0){
+        printf("handshake error. aborting\n");
+        exit(1);
+    }
+    else{
+        printf("handshake successful\n");
+    }
 
+    
+    while(1){
         // the receiving process
         // we're receveing the buffers one by one and writing them down on the new file 
-        while ((bytes_received = recvfrom(recv_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&server_addr, &addr_len)) > 0) {
+        while ((bytes_received = recvfrom(recv_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_len)) > 0) {
             total_bytes_received += bytes_received;
 
             if (bytes_received < 0) {
