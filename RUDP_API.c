@@ -12,11 +12,11 @@
 #define TRUE 1
 #define FALSE 0
 
-typedef struct {
+typedef struct _Packet{
     int seq_num;
     uint16_t checksum;
     uint16_t length;
-    __u_short flag;
+    unsigned short flag;
     char data[MAX_DATA_SIZE];
 } Packet;
 
@@ -25,6 +25,14 @@ typedef struct {
 int seq_num = 0;
 //could possibly add a packet loss send retries counter here
 
+void initPacket(Packet *packet, int seq_num, __u_short flags, char* data){
+    *packet->data = *data;
+    packet->seq_num = seq_num;
+    packet->flag = flags;
+    packet->checksum = 0;
+    packet->length = sizeof(Packet);
+
+}
 
 int rudp_socket(struct sockaddr_in addr, int port, char* ip) {
     int sockfd;
@@ -124,16 +132,17 @@ int senderHandshake(int sockfd, struct sockaddr_in *serverAddr) {
     struct timeval timeout;
     timeout.tv_sec = 6;
     timeout.tv_usec = 0;
-    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
 
     Packet handshake_send; //sender's packet
+    initPacket(&handshake_send, 0, 1, "SYN");
     handshake_send.flag = 1; //SYN flag
     socklen_t serverAddrLen = sizeof(*serverAddr);
     
     /*****************************************/
     //sender Sending SYN packet to the receiver
-    if(sendto(sockfd, &handshake_send, ntohs(handshake_send.length), 0, (const struct sockaddr *)serverAddr, serverAddrLen) < 0) {
-        perror("sendto failed\n");
+    if(sendto(sockfd, &handshake_send, (sizeof(handshake_send)), 0, (const struct sockaddr *)serverAddr, sizeof(*serverAddr)) < 0) {
+        perror("sendto failed");
         return -1; // Error sending handshake packet
     }
     printf("SYN packet sent.\n");

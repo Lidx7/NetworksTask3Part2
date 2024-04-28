@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     double total_time;
     start_time = clock();   
 
-    if(senderHandshake(recv_socket, &clientAddr) != 0){
+    if(receiverHandshake(recv_socket, &clientAddr) != 0){
         printf("handshake error. aborting\n");
         exit(1);
     }
@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
         printf("handshake successful\n");
     }
 
-    
+
     while(1){
         // the receiving process
         // we're receveing the buffers one by one and writing them down on the new file 

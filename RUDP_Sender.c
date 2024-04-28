@@ -40,6 +40,13 @@ int main(int argc, char* argv[]) {
     socklen_t addr_len = sizeof(serverAddress);
     int send_socket = rudp_socket(serverAddress, port, ip);
 
+    serverAddress.sin_family = AF_INET;
+    serverAddress.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip, &serverAddress.sin_addr) <= 0) {
+        perror("inet_pton failed");
+        exit(EXIT_FAILURE);
+    }
+
     if(senderHandshake(send_socket, &serverAddress) != 0){
         printf("handshake error. aborting\n");
         exit(1);
