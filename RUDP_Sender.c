@@ -36,18 +36,18 @@ int main(int argc, char* argv[]) {
 
     //creating socket
     struct sockaddr_in serverAddress;
-    int sender_socket = rudp_socket(serverAddress, port, ip);
     char buffer[1024];
     socklen_t addr_len = sizeof(serverAddress);
+    int send_socket = rudp_socket(serverAddress, port, ip);
 
     // Send SYN
     printf("Sending handshake request to server...\n");
-    rudp_send("SYN", sender_socket, 1, serverAddress);
-    //sendto(sender_socket, "SYN", sizeof("SYN"), 0, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
+    rudp_send("SYN", send_socket, 1, serverAddress);
+    //sendto(send_socket, "SYN", sizeof("SYN"), 0, (struct sockaddr *)&serverAddress, sizeof(serverAddress));
     printf("Handshake request sent. Waiting for acknowledgment...\n");
 
     // Receive ACK
-    recvfrom(sender_socket, buffer, sizeof("ACK"), 0, (struct sockaddr *)&serverAddress, &addr_len);
+    recvfrom(send_socket, buffer, sizeof("ACK"), 0, (struct sockaddr *)&serverAddress, &addr_len);
     printf("Handshake acknowledgment received from server: %s\n", buffer);
 
     printf("Handshake complete. Sending data...\n");
@@ -60,9 +60,9 @@ int main(int argc, char* argv[]) {
 //         tv.tv_sec = 6; // 1 second timeout
 //         tv.tv_usec = 0;
 //         int ex_seq_num = 0;
-//         setsockopt(sender_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+//         setsockopt(send_socket, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 
-//         int bytes_received = recvfrom(sender_socket, &buffer, sizeof(int), 0, (struct sockaddr *)&serverAddress, &addr_len);
+//         int bytes_received = recvfrom(send_socket, &buffer, sizeof(int), 0, (struct sockaddr *)&serverAddress, &addr_len);
 //         Packet *packet = (Packet *)buffer;
 
 //         if (bytes_received != -1 && ((packet)->seq_num == ex_seq_num)) {
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
 //             break;
 //         } else {
 //             printf("Timeout. Retransmitting packet...\n");
-//             sendto(sender_socket, &packet, sizeof(packet), 0, (struct sockaddr *)&serverAddress, addr_len);
+//             sendto(send_socket, &packet, sizeof(packet), 0, (struct sockaddr *)&serverAddress, addr_len);
             
 //         }
 //     }
@@ -80,14 +80,14 @@ int main(int argc, char* argv[]) {
     //sending the file and repeating as long as the user wants
     char again;
     do {
-        rudp_send(rand_file, sender_socket, 0, serverAddress);
-        send(sender_socket, "\exit", strlen("\exit") + 1, 0);
+        rudp_send(rand_file, send_socket, 0, serverAddress);
+        send(send_socket, "\exit", strlen("\exit") + 1, 0);
         printf("Do you want to send the file again? type y for yes, any other character for no\n");
         scanf(" %c", &again);
     } while (again == 'y' || again == 'Y');
 
     //closing the socket and freeing the memory
-    rudp_close(sender_socket);
+    rudp_close(send_socket);
     free(rand_file);
 
     return 0;

@@ -93,6 +93,7 @@ int rudp_recv(int sockfd, struct sockaddr_in recv_addr){
         }
         if(packet->flag == 2){
             printf("received ACK");
+            return 0;
         }
         if(packet-> flag == 0){
             if (packet->seq_num == seq_num) {
@@ -116,3 +117,118 @@ void rudp_close(int socket){
     return;
 }
 
+
+
+
+int performHandshake(int sockfd_send, struct sockaddr_in *serverAddr,int sockfd_recv, struct sockaddr_in *clientAddr) {
+    struct timeval timeout;
+    timeout.tv_sec = 6;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd_send, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+    setsockopt(sockfd_recv, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+
+    Packet handshakePacket_send; //sender's packet
+    handshakePacket_send.flag = 1; //SYN flag
+
+    Packet handshakePacket_recv; //receiver's packet
+    socklen_t clientAddrLen = sizeof(*clientAddr);
+    
+    /*****************************************/
+    //sender Sending SYN packet to the receiver
+    if (sendto(sockfd_send, &handshakePacket_send, ntohs(handshakePacket_send.length), 0, (const struct sockaddr *)serverAddr, sizeof(*serverAddr)) < 0) {
+        perror("sendto failed\n");
+        return -1; // Error sending handshake packet
+    }
+    printf("SYN packet sent.\n");
+
+
+    /*******************************************/
+    //receiver receiving SYN and sending back ACK
+    if ((recvfrom(sockfd_recv, &handshakePacket_recv, sizeof(handshakePacket_recv), 0, (struct sockaddr *)clientAddr, &clientAddrLen)) < 0) {
+        perror("recvfrom failed\n");
+        return -1; // Error receiving handshake packet
+    }
+
+    if(handshakePacket_recv.flag == 1){
+        printf("SYN received. sending ACK\n");
+        handshakePacket_recv.flag = 2; //ACK flag
+
+        if(sendto(sockfd_recv, &handshakePacket_recv, ntohs(handshakePacket_recv.length), 0, (const struct sockaddr *)clientAddr, sizeof(*clientAddr)) < 0){
+            perror("sendto failed\n");
+            return -1;
+        }
+    }
+    else{
+        printf("Hasn't received SYN. aborting\n");
+        return 1;
+    }
+
+
+    /**************************************************/
+    // sender waits for acknowledgment from the receiver
+    if (recvfrom(sockfd_send, &handshakePacket_send, sizeof(handshakePacket_send), 0, (struct sockaddr *)serverAddr, sizeof(*serverAddr))) {
+        printf("Acknowledgment for handshake not received. Handshake failed.\n");
+        return 1; // Handshake failed
+    }
+
+    if(handshakePacket_send.flag == 2){
+        printf("ACK received\n");
+    }
+    else{
+        printf("no ACK received. aborting\n");
+    }
+
+
+    printf("Handshake successful.\n");
+    return 0; // Handshake successful
+}
+
+int receiveHandshake(int sockfd, struct sockaddr_in *clientAddr) {
+    
+    
+
+    // Send acknowledgment back to the sender
+    sendAck(sockfd, clientAddr);
+
+    printf("Handshake packet received and acknowledged.\n");
+    printf("Waiting for acknowledgment...\n");
+    if(!receiveAck(sockfd, clientAddr)) {
+        printf("Acknowledgment for handshake not received. Handshake failed.\n");
+        return 0; // Handshake failed
+    }
+    return 1; // Handshake successful
+}
+
+void sendAck(int sockfd, struct sockaddr_in *clientAddr) {
+    Packet ackHeader;
+    ackHeader.flag = 2; 
+    ackHeader.length = htons(sizeof(Packet));
+    if (sendto(sockfd, &ackHeader, sizeof(ackHeader), 0, (const struct sockaddr *)clientAddr, sizeof(*clientAddr)) < 0) {
+        perror("sendto failed");
+        exit(EXIT_FAILURE);
+    }
+    printf("Acknowledge sent.\n");
+}
+
+int receiveAck(int sockfd, struct sockaddr_in *serverAddr) {
+    struct timeval timeout;
+    timeout.tv_sec = 6;
+    timeout.tv_usec = 0;
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+
+    Packet ack_packet;
+    socklen_t serverAddrLen = sizeof(*serverAddr);
+    int numBytesReceived = recvfrom(sockfd, &ack_packet, sizeof(ack_packet), 0, (struct sockaddr *)serverAddr, &serverAddrLen);
+    if (numBytesReceived < 0) {
+        printf("no ACK received. aborting");
+        return 1; // Acknowledge not received
+    }
+    if(ack_packet.flag == 2){
+        printf("Acknowledge received.\n");
+    }
+    else{
+        printf("no ACK received. aborting");
+        return 1;
+    }
+    return 0; // Acknowledge received
+}
