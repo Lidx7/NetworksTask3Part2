@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     char again;
     do {
         rudp_send(rand_file, send_socket, 0, serverAddress);
-        send(send_socket, "\exit", strlen("\exit") + 1, 0);
+        rudp_send("\exit", send_socket, 0, serverAddress);
         printf("Do you want to send the file again? type y for yes, any other character for no\n");
         scanf(" %c", &again);
     } while (again == 'y' || again == 'Y');

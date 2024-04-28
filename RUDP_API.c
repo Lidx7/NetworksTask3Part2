@@ -68,8 +68,9 @@ void rudp_send(const char *data, int sockfd, __u_short flag, struct sockaddr_in 
         tv.tv_usec = 0;
         setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
 
-        int bytes_received = recvfrom(sockfd, &tempPacket, sizeof(int), 0, (struct sockaddr *)&recv_addr, &addr_len);
-        if (bytes_received != -1 && tempPacket.seq_num == seq_num) {
+        int bytes_received = recvfrom(sockfd, &tempPacket, sizeof(tempPacket), 0, (struct sockaddr *)&recv_addr, &addr_len);
+        printf("%d", bytes_received);/////////////////////////////////////////////////////////
+        if (bytes_received != -1 /*&& tempPacket.seq_num == seq_num*/) {
             printf("Packet with sequence number %d acknowledged.\n", seq_num);
             break;
         } else {
@@ -83,32 +84,33 @@ void rudp_send(const char *data, int sockfd, __u_short flag, struct sockaddr_in 
 
 int rudp_recv(int sockfd, struct sockaddr_in recv_addr){
     socklen_t addr_len = sizeof(struct sockaddr);
-    char buffer[MAX_DATA_SIZE];
+    //char buffer[MAX_DATA_SIZE];
+    Packet *buffer;
+
 
     while (TRUE) {
         // Receive packet from client
-        int bytes_received = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
+        int bytes_received = recvfrom(sockfd, &buffer, sizeof(buffer), 0, (struct sockaddr *)&recv_addr, &addr_len);
         if (bytes_received == -1) {
             perror("Receive error");
             continue;
         }
 
-        Packet *packet = (Packet *)buffer;
         
-        if(packet->flag == 1){
+        if(buffer->flag == 1){
             printf("received SYN");
             rudp_send("ACK", sockfd, 2, recv_addr);
         }
-        if(packet->flag == 2){
+        if(buffer->flag == 2){
             printf("received ACK");
             return 0;
         }
-        if(packet-> flag == 0){
-            if (packet->seq_num == seq_num) {
+        if(buffer-> flag == 0){
+            if (buffer->seq_num == seq_num) {
                 printf("Received packet with sequence number %d\n", seq_num);
                 char seq_num_c = seq_num + '0';
                 rudp_send(&seq_num_c, sockfd, 2, recv_addr);// Acknowledge received packet
-                printf("Data: %s\n", packet->data);// Print received data
+                printf("Data: %s\n", buffer->data);// Print received data
                 seq_num = (seq_num + 1);// Update sequence number
             } else {
                 printf("Received out-of-order packet. Discarding...\n");
@@ -145,13 +147,14 @@ int senderHandshake(int sockfd, struct sockaddr_in *serverAddr) {
         perror("sendto failed");
         return -1; // Error sending handshake packet
     }
-    printf("SYN packet sent.\n");
-
+    else{
+        printf("SYN packet sent.\n");
+    }
 
     /**************************************************/
     // sender waits for acknowledgment from the receiver
-    if (recvfrom(sockfd, &handshake_send, sizeof(handshake_send), 0, (struct sockaddr *)serverAddr, &serverAddrLen)) {
-        printf("Acknowledgment for handshake not received. Handshake failed.\n");
+    if ((recvfrom(sockfd, &handshake_send, sizeof(handshake_send), 0, (struct sockaddr *)serverAddr, &serverAddrLen)) < 0) {
+        perror("recvfrom failed");
         return 1; // Handshake failed
     }
 
@@ -162,8 +165,6 @@ int senderHandshake(int sockfd, struct sockaddr_in *serverAddr) {
         printf("no ACK received. aborting\n");
     }
 
-
-    printf("Handshake successful.\n");
     return 0; // Handshake successful
 }
 

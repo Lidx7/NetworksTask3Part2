@@ -55,35 +55,39 @@ int main(int argc, char* argv[]) {
     }
 
 
-    while(1){
-        // the receiving process
-        // we're receveing the buffers one by one and writing them down on the new file 
-        while ((bytes_received = recvfrom(recv_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_len)) > 0) {
-            total_bytes_received += bytes_received;
+    printf("trying to receive\n");////////////////////////////////////////////////////
 
-            if (bytes_received < 0) {
-                perror("Error receiving data");
-                exit(1);
-            }
+    /*Note to self: the problem is in this loop!!!*/
+    while (1) {
+    // the receiving process
+    // we're receiving the buffers one by one and writing them down on the new file 
+    while ((bytes_received = recvfrom(recv_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_len)) > 0) {
+        total_bytes_received += bytes_received;
 
-            if (strstr(buffer, "\exit") != NULL) {
-                char* exit_position = strstr(buffer, "\exit");
-                size_t bytes_to_write = exit_position - buffer;
+        if (bytes_received < 0) {
+            perror("Error receiving data");
+            exit(1);
+        }
+        
+        // Check if the buffer contains "\exit"
+        if (strstr(buffer, "\exit") != NULL) {
+            // Process the received data containing "\exit"
+            char* exit_position = strstr(buffer, "\exit");
+            size_t bytes_to_write = exit_position - buffer;
 
-                end_time = clock();
-                total_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-               // printf("File received and saved as %s (Time taken: %.8f seconds)\n", name, total_time);
-                
-                double average_bandwidth = (total_bytes_received * 8) / (total_time * 1024 * 1024); // in Mbps
-                printf("Average Bandwidth: %.2f Mbps\n", average_bandwidth);
-                
-                start_time = clock();
-                continue;
-            } else {
-                break;
-            }
-        } 
-    }
+            end_time = clock();
+            total_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
+           // printf("File received and saved as %s (Time taken: %.8f seconds)\n", name, total_time);
+            
+            double average_bandwidth = (total_bytes_received * 8) / (total_time * 1024 * 1024); // in Mbps
+            printf("Average Bandwidth: %.2f Mbps\n", average_bandwidth);
+            
+            start_time = clock();
+            break; // Exit the inner loop
+        }
+    } 
+}
+
     // Close sockets
     rudp_close(recv_socket);
 
