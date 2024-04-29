@@ -36,8 +36,6 @@ int main(int argc, char* argv[]) {
 
     //creating socket
     struct sockaddr_in serverAddress;
-    char buffer[1024];
-    socklen_t addr_len = sizeof(serverAddress);
     int send_socket = rudp_socket(serverAddress, port, ip);
 
     serverAddress.sin_family = AF_INET;
@@ -58,14 +56,16 @@ int main(int argc, char* argv[]) {
     //sending the file and repeating as long as the user wants
     char again;
     do {
-        rudp_send(rand_file, send_socket, 0, serverAddress);
-        rudp_send("\exit", send_socket, 0, serverAddress);
+        rudp_send(rand_file, send_socket, 0, &serverAddress, file_size);
+        //rudp_send("\exit", send_socket, 0, &serverAddress, 0);
         printf("Do you want to send the file again? type y for yes, any other character for no\n");
         scanf(" %c", &again);
     } while (again == 'y' || again == 'Y');
+    rudp_send("\exit", send_socket, 3, &serverAddress, 0);
+
 
     //closing the socket and freeing the memory
-    rudp_close(send_socket);
+    //rudp_close(send_socket);
     free(rand_file);
 
     return 0;

@@ -23,8 +23,6 @@ int main(int argc, char* argv[]) {
 
     //creating socket
     struct sockaddr_in clientAddr;
-    socklen_t addr_len = sizeof(struct sockaddr);
-    Packet current_packet;
     int recv_socket = rudp_socket(clientAddr, curr_port, INADDR_ANY);
     char buffer[BUFFER_SIZE];
 
@@ -56,24 +54,24 @@ int main(int argc, char* argv[]) {
 
 
     printf("trying to receive\n");////////////////////////////////////////////////////
-
-    /*Note to self: the problem is in this loop!!!*/
     while (1) {
-    // the receiving process
-    // we're receiving the buffers one by one and writing them down on the new file 
-    while ((bytes_received = recvfrom(recv_socket, buffer, BUFFER_SIZE, 0, (struct sockaddr *)&clientAddr, &addr_len)) > 0) {
-        total_bytes_received += bytes_received;
-
+        bytes_received = rudp_recv(recv_socket, &clientAddr);
+        return 0; 
         if (bytes_received < 0) {
             perror("Error receiving data");
             exit(1);
         }
+        else {
+            // Data received successfully
+            total_bytes_received += bytes_received;
+            // Process the received data here
+            // For example, you can print it:
+            printf("Received: %s\n", buffer);
+        }  
         
         // Check if the buffer contains "\exit"
         if (strstr(buffer, "\exit") != NULL) {
             // Process the received data containing "\exit"
-            char* exit_position = strstr(buffer, "\exit");
-            size_t bytes_to_write = exit_position - buffer;
 
             end_time = clock();
             total_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
@@ -85,11 +83,15 @@ int main(int argc, char* argv[]) {
             start_time = clock();
             break; // Exit the inner loop
         }
-    } 
-}
+     
+    }
+
 
     // Close sockets
     rudp_close(recv_socket);
 
     return 0;
+    
 }
+
+

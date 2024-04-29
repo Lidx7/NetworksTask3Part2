@@ -1,17 +1,15 @@
 #include <stdio.h>
+#include <time.h>
 
-char *util_generate_random_data(unsigned int size) {
-    char *buffer = NULL;
-    // Argument check.
+char *util_generate_random_data(int size) {
+    char *rand_file_ret = NULL;
     if (size == 0)
         return NULL;
-    buffer = (char *)calloc(size, sizeof(char));
-    // Error checking.
-    if (buffer == NULL)
+    rand_file_ret = (char *)calloc(size, sizeof(char));
+    if (rand_file_ret == NULL)
         return NULL;
-    // Randomize the seed of the random number generator.
-    // srand(time(NULL));
+    srand(time(NULL));
     for (unsigned int i = 0; i < size; i++)
-        *(buffer + i) = ((unsigned int)rand() % 256);
-    return buffer;
+        *(rand_file_ret + i) = ((unsigned int)rand() % 256);
+    return rand_file_ret;
 }
