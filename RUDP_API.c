@@ -22,6 +22,15 @@ typedef struct _Packet{
     char data[MAX_DATA_SIZE];
 } Packet;
 
+struct timeval start_time, end_time;
+int total_bytes_received = 0;
+
+void printStats(){
+    double total_time = (double)(end_time.tv_sec - start_time.tv_sec) + (end_time.tv_usec + start_time.tv_usec)/ 1e6;
+    printf("Total bytes received: %d\n", total_bytes_received);
+    printf("Total time taken: %.8f seconds\n", total_time);
+    printf("Average throughput: %f bytes/second\n", (double)total_bytes_received / total_time);
+}
 
 unsigned short int calculate_checksum(void *data, unsigned int bytes) {
     unsigned short int *data_pointer = (unsigned short int *)data;
@@ -148,6 +157,7 @@ int rudp_recv(int sockfd, struct sockaddr_in* recv_addr){
     while (TRUE) {
         // Receive packet from client
         ssize_t bytes_received = recvfrom(sockfd, buffer, sizeof(Packet) + buffer->length, 0, (struct sockaddr *) recv_addr, &addr_len);
+        total_bytes_received += bytes_received;
         if(bytes_received < 0){
             printf("recvfrom failed (rudp_recv)\n"); 
         }
@@ -164,6 +174,8 @@ int rudp_recv(int sockfd, struct sockaddr_in* recv_addr){
         if(buffer->flag == 3){
             printf("received FIN. closing...\n");
             rudp_send(NULL, sockfd, 3, recv_addr, 0, seq_num);
+            gettimeofday(&end_time, NULL);
+            printStats();
             rudp_close(sockfd);
             exit(0);
         }

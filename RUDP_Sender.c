@@ -52,9 +52,11 @@ int main(int argc, char* argv[]) {
         printf("handshake successful\n");
     }
 
+
     //sending the file and repeating as long as the user wants
     char again;
     do {
+        
         rudp_send(rand_file, send_socket, 0, &serverAddress, file_size, 0);
 
         Packet reset_seq;

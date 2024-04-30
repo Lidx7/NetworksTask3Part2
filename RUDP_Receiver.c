@@ -37,19 +37,20 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Server is listening on port %d...\n", port);
-    
-    if(receiverHandshake(recv_socket, &receive_addr) != 0){
-                printf("handshake error. aborting\n");
-                exit(1);
-            }
-            else{
-                printf("handshake successful\n");
-            }
 
-    printf("trying to receive\n");/////////////////////////////////////////////////////////////////////////////////////////////////
+    if(receiverHandshake(recv_socket, &receive_addr) != 0){
+        printf("handshake error. aborting\n");
+        exit(1);
+    }
+    else{
+        printf("handshake successful\n");
+    }
+
+    gettimeofday(&start_time, NULL); 
+
     while (1) {
-         
-        if (rudp_recv(recv_socket, &receive_addr) < 0) {
+        int bytes_received = rudp_recv(recv_socket, &receive_addr);
+        if (bytes_received < 0) {
             perror("Error receiving data");
             exit(1);
         }
@@ -58,9 +59,7 @@ int main(int argc, char* argv[]) {
              
     }
 
-    //rudp_send(NULL, recv_socket, 3, &receive_addr, 0, 0);
-
-    /* TODO: add stats here! */
+    
 
 
     return 0;
