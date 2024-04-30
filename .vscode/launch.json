@@ -8,8 +8,8 @@
       "args": [],
       "stopAtEntry": false,
       "externalConsole": false,
-      "cwd": "/home/lidor/Desktop/Tasks/NetworksTask3Part2",
-      "program": "/home/lidor/Desktop/Tasks/NetworksTask3Part2/build/Debug/outDebug",
+      "cwd": "/home/lidor/Desktop/Tasks/NetworksTask3Part2/NetworksTask3Part2",
+      "program": "/home/lidor/Desktop/Tasks/NetworksTask3Part2/NetworksTask3Part2/build/Debug/outDebug",
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
       "setupCommands": [

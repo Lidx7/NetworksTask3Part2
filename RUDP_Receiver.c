@@ -15,80 +15,53 @@
 
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
+    if (argc != 2) {
         printf("Usage: %s <port>\n", argv[0]);
         return 1;
     }
-    int curr_port = atoi(argv[1]);
+    int port = atoi(argv[1]);
+    char buffer[BUFFER_SIZE];
+    int seq_num = 0;
 
     //creating socket
-    struct sockaddr_in clientAddr;
-    int recv_socket = rudp_socket(clientAddr, curr_port, INADDR_ANY);
-    char buffer[BUFFER_SIZE];
+    struct sockaddr_in receive_addr;
+    int recv_socket = rudp_socket();
 
-    memset(&clientAddr, 0, sizeof(clientAddr));
-    clientAddr.sin_family = AF_INET;
-    clientAddr.sin_addr.s_addr = INADDR_ANY;
-    clientAddr.sin_port = htons(curr_port);
-    if ((bind(recv_socket, (struct sockaddr*)&clientAddr, sizeof(clientAddr))) < 0 ) {
+    memset(&receive_addr, 0, sizeof(receive_addr));
+    receive_addr.sin_family = AF_INET;
+    receive_addr.sin_addr.s_addr = INADDR_ANY;
+    receive_addr.sin_port = htons(port);
+    if ((bind(recv_socket, (struct sockaddr*)&receive_addr, sizeof(receive_addr))) < 0 ) {
         perror("Error binding socket");
         exit(1);
     }
-    printf("Server is listening on port %d...\n", curr_port);
+
+    printf("Server is listening on port %d...\n", port);
     
-    ssize_t total_bytes_received = 0;
-    ssize_t bytes_received;
+    if(receiverHandshake(recv_socket, &receive_addr) != 0){
+                printf("handshake error. aborting\n");
+                exit(1);
+            }
+            else{
+                printf("handshake successful\n");
+            }
 
-    // the time meassure
-    clock_t start_time, end_time;
-    double total_time;
-    start_time = clock();   
-
-    if(receiverHandshake(recv_socket, &clientAddr) != 0){
-        printf("handshake error. aborting\n");
-        exit(1);
-    }
-    else{
-        printf("handshake successful\n");
-    }
-
-
-    printf("trying to receive\n");////////////////////////////////////////////////////
+    printf("trying to receive\n");/////////////////////////////////////////////////////////////////////////////////////////////////
     while (1) {
-        bytes_received = rudp_recv(recv_socket, &clientAddr);
-        return 0; 
-        if (bytes_received < 0) {
+         
+        if (rudp_recv(recv_socket, &receive_addr) < 0) {
             perror("Error receiving data");
             exit(1);
         }
-        else {
-            // Data received successfully
-            total_bytes_received += bytes_received;
-            // Process the received data here
-            // For example, you can print it:
-            printf("Received: %s\n", buffer);
-        }  
-        
-        // Check if the buffer contains "\exit"
-        if (strstr(buffer, "\exit") != NULL) {
-            // Process the received data containing "\exit"
-
-            end_time = clock();
-            total_time = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;
-           // printf("File received and saved as %s (Time taken: %.8f seconds)\n", name, total_time);
-            
-            double average_bandwidth = (total_bytes_received * 8) / (total_time * 1024 * 1024); // in Mbps
-            printf("Average Bandwidth: %.2f Mbps\n", average_bandwidth);
-            
-            start_time = clock();
-            break; // Exit the inner loop
-        }
-     
+        printf("finished receiving file\n");
+        break;
+             
     }
 
+    //rudp_send(NULL, recv_socket, 3, &receive_addr, 0, 0);
 
-    // Close sockets
-    rudp_close(recv_socket);
+    /* TODO: add stats here! */
+
 
     return 0;
     

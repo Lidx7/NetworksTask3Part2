@@ -7,7 +7,6 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
-#include "RandomFileGen.c"
 #include "RUDP_API.c"
 
 
@@ -19,7 +18,7 @@
 
 int main(int argc, char* argv[]) {
     // correct argument input check
-    if (argc < 3) {
+    if (argc != 3) {
         printf("Usage: %s <IP> <port>\n", argv[0]);
         return 1;
     }
@@ -36,7 +35,7 @@ int main(int argc, char* argv[]) {
 
     //creating socket
     struct sockaddr_in serverAddress;
-    int send_socket = rudp_socket(serverAddress, port, ip);
+    int send_socket = rudp_socket();
 
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
@@ -56,12 +55,12 @@ int main(int argc, char* argv[]) {
     //sending the file and repeating as long as the user wants
     char again;
     do {
-        rudp_send(rand_file, send_socket, 0, &serverAddress, file_size);
-        //rudp_send("\exit", send_socket, 0, &serverAddress, 0);
+        rudp_send(rand_file, send_socket, 0, &serverAddress, file_size, 0);
+        rudp_send("", send_socket, 4, &serverAddress, 1, 0);
         printf("Do you want to send the file again? type y for yes, any other character for no\n");
         scanf(" %c", &again);
     } while (again == 'y' || again == 'Y');
-    rudp_send("\exit", send_socket, 3, &serverAddress, 0);
+    rudp_send("", send_socket, 3, &serverAddress, 1, 0);
 
 
     //closing the socket and freeing the memory
