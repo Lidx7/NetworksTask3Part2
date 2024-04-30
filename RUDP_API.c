@@ -70,14 +70,6 @@ void rudp_close(int socket){
     return;
 }
 
-void initPacket(Packet *packet, int seq_num, __u_short flags, char* data){
-    packet->seq_num = seq_num;
-    packet->flag = flags;
-    packet->checksum = 0;
-    packet->length = strlen(data);
-    memcpy(packet->data, data, packet->length);
-}
-
 
 int rudp_socket() {
     int sockfd;
@@ -94,12 +86,6 @@ int rudp_socket() {
 
 
 void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockaddr_in* recv_addr, int data_length, int seq_num) {
-    // Create a packet for this chunk of data
-    
-    
-
-    //int seq_num = 0; // Initialize sequence number
-
     struct timeval timeout;
     timeout.tv_sec = 0;
     timeout.tv_usec = 50000;
@@ -215,10 +201,7 @@ int rudp_recv(int sockfd, struct sockaddr_in* recv_addr){
 
 
 int senderHandshake(int sockfd, struct sockaddr_in *serverAddr) {
-    // struct timeval timeout;
-    // timeout.tv_sec = 0;
-    // timeout.tv_usec = 500000;
-    // setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
+    
 
     Packet handshake_send; //sender's packet
     handshake_send.flag = 1; //SYN flag
@@ -278,52 +261,6 @@ int receiverHandshake(int sockfd, struct sockaddr_in *clientAddr){
             printf("Hasn't received SYN. aborting\n");
             return 1;
         }
-    
 
     return 0; //success
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // while (retries){
-        //     Packet tempPacket;
-        //     // Set timeout for acknowledgment
-        //     struct timeval tv;
-        //     tv.tv_sec = 0;
-        //     tv.tv_usec = 500000; // 0.5 second timeout
-
-        //     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
-
-        //     int bytes_received = recvfrom(sockfd, &tempPacket, sizeof(tempPacket), 0, NULL, &addr_len);
-        //     if(bytes_received== -1) printf("ronaldoooooo");
-        //     if (bytes_received >= 0 /*&& tempPacket.seq_num == packet.seq_num*/) {
-        //         printf("Packet with sequence number %d acknowledged.\n", packet.seq_num);
-        //         packet.seq_num++;
-        //         retries = RETRIES;
-        //         break;
-            
-        //     } else {
-        //         printf("Timeout or incorrect acknowledgment. Retransmitting packet...\n");
-        //         // Resend packet
-        //         sendto(sockfd, &packet, sizeof(packet), 0, (struct sockaddr *)recv_addr, addr_len);
-        //         retries--;
-        //     }
-        
-    
-        // }
