@@ -12,7 +12,7 @@
 #define MAX_DATA_SIZE 16215
 #define TRUE 1
 #define FALSE 0
-#define RETRIES 5
+#define RETRIES 20
 
 typedef struct _Packet{
     int seq_num;
@@ -102,10 +102,10 @@ void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockadd
 
     struct timeval timeout;
     timeout.tv_sec = 0;
-    timeout.tv_usec = 500000;
+    timeout.tv_usec = 50000;
     setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
 
-        
+    socklen_t recv_addr_len = sizeof(*recv_addr);        
     int num_packets = (data_length + MAX_DATA_SIZE - 1) / MAX_DATA_SIZE; // Calculate the number of packets needed
 
 
@@ -115,7 +115,7 @@ void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockadd
         int remaining_data = data_length - (i) * MAX_DATA_SIZE;
         int chunk_size = remaining_data > MAX_DATA_SIZE ? MAX_DATA_SIZE : remaining_data;
 
-        packet.seq_num = seq_num++;
+        packet.seq_num = seq_num;
         packet.length = chunk_size;
         memcpy(packet.data, data + i * MAX_DATA_SIZE, chunk_size);
         packet.checksum = calculate_checksum(packet.data, packet.length);
@@ -123,11 +123,13 @@ void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockadd
         int c = 0;
         int retries = RETRIES;
         while (c<retries){
+            printf("sending packet with seq_num %d\n", seq_num);
             if(sendto(sockfd, &packet, sizeof(Packet), 0, (struct sockaddr *)recv_addr, sizeof(*recv_addr)) < 0){
                 perror("sendto failed");
                 exit(1);
             }
-            if(recvfrom(sockfd, &packet, sizeof(Packet), 0, NULL, NULL) < 0){
+            printf("packet sent\n");
+            if(recvfrom(sockfd, &packet, sizeof(Packet), 0, (struct sockaddr *)recv_addr, &recv_addr_len) < 0){
                 perror("ack not received");
                 c++;
             }
@@ -135,10 +137,10 @@ void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockadd
                 printf("ack received\n");
                 break;
             }
-            
-
 
         }
+        seq_num++;
+        
     }
     return;
 }
@@ -152,6 +154,11 @@ int rudp_recv(int sockfd, struct sockaddr_in* recv_addr){
         exit(1); // Exit with error
     }
     int seq_num = 0;
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 50000;
+    setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
 
 
     while (TRUE) {

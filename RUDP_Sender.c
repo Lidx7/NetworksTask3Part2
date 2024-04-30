@@ -37,6 +37,11 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in serverAddress;
     int send_socket = rudp_socket();
 
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 50000;
+    setsockopt(send_socket, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
+
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_port = htons(port);
     if (inet_pton(AF_INET, ip, &serverAddress.sin_addr) <= 0) {

@@ -27,6 +27,11 @@ int main(int argc, char* argv[]) {
     struct sockaddr_in receive_addr;
     int recv_socket = rudp_socket();
 
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 50000;
+    setsockopt(recv_socket, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
+
     memset(&receive_addr, 0, sizeof(receive_addr));
     receive_addr.sin_family = AF_INET;
     receive_addr.sin_addr.s_addr = INADDR_ANY;
@@ -54,8 +59,11 @@ int main(int argc, char* argv[]) {
             perror("Error receiving data");
             exit(1);
         }
+        else if (bytes_received == 3) {
+            break;
+        }
         printf("finished receiving file\n");
-        break;
+        
              
     }
 
