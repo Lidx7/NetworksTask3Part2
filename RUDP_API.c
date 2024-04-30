@@ -86,8 +86,8 @@ int rudp_socket() {
 
 void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockaddr_in* recv_addr, int data_length, int seq_num) {
     // Create a packet for this chunk of data
-    Packet packet;
-    packet.flag = flag;
+    
+    
 
     //int seq_num = 0; // Initialize sequence number
 
@@ -98,26 +98,38 @@ void rudp_send(const char *data, int sockfd, unsigned short flag, struct sockadd
 
         
     int num_packets = (data_length + MAX_DATA_SIZE - 1) / MAX_DATA_SIZE; // Calculate the number of packets needed
-    int retries  = RETRIES;
 
 
     for (int i = 0; i < num_packets; i++) {
-
-        
+        Packet packet;
+        packet.flag = flag;
         int remaining_data = data_length - (i) * MAX_DATA_SIZE;
         int chunk_size = remaining_data > MAX_DATA_SIZE ? MAX_DATA_SIZE : remaining_data;
-        
+
         packet.seq_num = seq_num++;
         packet.length = chunk_size;
         memcpy(packet.data, data + i * MAX_DATA_SIZE, chunk_size);
         packet.checksum = calculate_checksum(packet.data, packet.length);
 
+        int c = 0;
+        int retries = RETRIES;
+        while (c<retries){
+            if(sendto(sockfd, &packet, sizeof(Packet), 0, (struct sockaddr *)recv_addr, sizeof(*recv_addr)) < 0){
+                perror("sendto failed");
+                exit(1);
+            }
+            if(recvfrom(sockfd, &packet, sizeof(Packet), 0, NULL, NULL) < 0){
+                perror("ack not received");
+                c++;
+            }
+            else{
+                printf("ack received\n");
+                break;
+            }
+            
 
-        if(sendto(sockfd, &packet, sizeof(Packet), 0, (struct sockaddr *)recv_addr, sizeof(*recv_addr)) < 0){
-            perror("sendto failed");
-            break;
+
         }
-    
     }
     return;
 }
@@ -158,13 +170,14 @@ int rudp_recv(int sockfd, struct sockaddr_in* recv_addr){
         if(buffer->flag == 4){
             seq_num = 0;
         }
-        if(buffer->flag == 0){
-            printf("%d \n %d", buffer->seq_num, seq_num);
+        if(buffer->flag == 0 && buffer->checksum == calculate_checksum(buffer->data, buffer->length)){
             if ((buffer->seq_num)%10 == seq_num%10) {
                 printf("Received packet with sequence number %d\n", seq_num);
-                char seq_num_c = seq_num + '0';
-                rudp_send(&seq_num_c, sockfd, 2, recv_addr, 0, seq_num);// Acknowledge received packet
-                //printf("Data: %s\n", buffer.data);// Print received data
+
+                Packet ack_packet;
+                ack_packet.flag = 2;
+                sendto(sockfd, &ack_packet, sizeof(Packet), 0, (struct sockaddr *)recv_addr, addr_len);
+
                 seq_num = (seq_num + 1)%10;// Update sequence number
             } else {
                 printf("Received out-of-order packet. Discarding...\n");

@@ -56,15 +56,19 @@ int main(int argc, char* argv[]) {
     char again;
     do {
         rudp_send(rand_file, send_socket, 0, &serverAddress, file_size, 0);
-        rudp_send("", send_socket, 4, &serverAddress, 1, 0);
+
+        Packet reset_seq;
+        reset_seq.flag = 4;
+        sendto(send_socket, &reset_seq, sizeof(reset_seq), 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
         printf("Do you want to send the file again? type y for yes, any other character for no\n");
         scanf(" %c", &again);
     } while (again == 'y' || again == 'Y');
-    rudp_send("", send_socket, 3, &serverAddress, 1, 0);
+
+    Packet fin;
+    fin.flag = 3;
+    sendto(send_socket, &fin, sizeof(fin), 0, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
 
 
-    //closing the socket and freeing the memory
-    //rudp_close(send_socket);
     free(rand_file);
 
     return 0;
